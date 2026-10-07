@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
@@ -6,11 +8,14 @@ import 'package:http/http.dart' as http;
 /// platform differences (cookies on web vs Android, CORS) surface here,
 /// not in Phase 2. Not shipped: no persistence, no polish.
 class SpikeApi {
-  SpikeApi({required this.baseUrl, http.Client? client})
+  SpikeApi({required this.baseUrl, http.Client? client, this.onSend})
     : _client = client ?? http.Client();
 
   final String baseUrl;
   final http.Client _client;
+
+  /// Hook for logging the exact outgoing body (dev-only observability).
+  final void Function(String body)? onSend;
   final Map<String, String> _cookies = {};
 
   /// Cookie names currently held (values never exposed).
@@ -55,10 +60,12 @@ class SpikeApi {
   }
 
   Future<SpikeResult> _post(String path, Map<String, String> json) async {
+    final encoded = jsonEncode(json);
+    onSend?.call(encoded);
     final res = await _client.post(
       Uri.parse('$baseUrl$path'),
       headers: {..._headers(), 'content-type': 'application/json'},
-      body: _encode(json),
+      body: encoded,
     );
     _storeCookies(res);
     return SpikeResult(res.statusCode, _snip(res.body));
@@ -96,9 +103,6 @@ class SpikeApi {
   void close() => _client.close();
 }
 
-String _encode(Map<String, String> json) =>
-    '{${json.entries.map((e) => '"${e.key}":"${e.value}"').join(',')}}}';
-
 String _snip(String body) =>
     body.length > 500 ? '${body.substring(0, 500)}…(${body.length} chars)' : body;
 
@@ -127,7 +131,10 @@ class AuthSpikeScreen extends StatefulWidget {
 }
 
 class _AuthSpikeScreenState extends State<AuthSpikeScreen> {
-  late final SpikeApi _api = SpikeApi(baseUrl: authBaseUrl);
+  late final SpikeApi _api = SpikeApi(
+    baseUrl: authBaseUrl,
+    onSend: (body) => _say('  sent: $body'),
+  );
   final _email = TextEditingController(text: 'fabian@bachi.dev');
   final _callback = TextEditingController(text: 'https://bachi.dev/work');
   final _verifyUrl = TextEditingController();
