@@ -189,6 +189,7 @@ class _AuthSpikeScreenState extends State<AuthSpikeScreen> {
           ),
           TextField(
             controller: _verifyUrl,
+            onChanged: (_) => setState(() {}),
             decoration: const InputDecoration(
               labelText: 'Verify link (paste from email, unclicked)',
             ),
