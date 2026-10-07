@@ -140,6 +140,7 @@ void main() {
         ),
       );
       expect(res.headers['access-control-allow-origin'], 'https://app.example');
+      expect(res.headers['access-control-allow-credentials'], 'true');
       expect(res.headers['vary'], 'Origin');
     });
 

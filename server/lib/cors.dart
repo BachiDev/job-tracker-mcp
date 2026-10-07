@@ -27,8 +27,13 @@ Middleware cors({required List<String> extraOrigins}) {
         return Response(
           204,
           headers: {
-            if (allowed(origin))
+            if (allowed(origin)) ...{
               'access-control-allow-origin': origin!,
+              // The app's web client sends credentials:include, which
+              // requires this header (Bearer auth itself doesn't need it,
+              // but the browser enforces the pair).
+              'access-control-allow-credentials': 'true',
+            },
             'access-control-allow-methods':
                 'GET, POST, PATCH, DELETE, OPTIONS',
             'access-control-allow-headers': 'authorization, content-type',
@@ -41,6 +46,7 @@ Middleware cors({required List<String> extraOrigins}) {
       return res.change(
         headers: {
           'access-control-allow-origin': origin!,
+          'access-control-allow-credentials': 'true',
           'vary': 'Origin',
         },
       );
