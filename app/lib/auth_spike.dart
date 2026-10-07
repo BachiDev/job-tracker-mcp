@@ -30,10 +30,24 @@ class SpikeApi {
 
   /// Fetch the emailed verify link *inside the app* (paste it, don't open it
   /// in a browser) so the session cookie lands in this jar on every platform.
+  ///
+  /// Follows redirects *manually*: the 302 from verify carries the
+  /// `Set-Cookie`, and auto-follow would swallow it, leaving `cookies: []`.
   Future<SpikeResult> verifyLink(String url) async {
-    final res = await _client.get(Uri.parse(url), headers: _headers());
-    _storeCookies(res);
-    return SpikeResult(res.statusCode, _snip(res.body));
+    var uri = Uri.parse(url);
+    for (var i = 0; i < 5; i++) {
+      final req = http.Request('GET', uri)..followRedirects = false;
+      req.headers.addAll(_headers());
+      final res = await http.Response.fromStream(await _client.send(req));
+      _storeCookies(res);
+      final loc = res.headers['location'];
+      if (_isRedirect(res.statusCode) && loc != null) {
+        uri = uri.resolve(loc);
+        continue;
+      }
+      return SpikeResult(res.statusCode, _snip(res.body));
+    }
+    return const SpikeResult(-1, 'too many redirects');
   }
 
   Future<SpikeResult> googleSignIn(String callbackUrl) {
@@ -109,13 +123,20 @@ String _snip(String body) =>
 /// One logged HTTP outcome. Bodies are truncated; cookie *values* are never
 /// logged (only names, via [SpikeApi.cookieNames]).
 class SpikeResult {
-  SpikeResult(this.status, this.body);
+  const SpikeResult(this.status, this.body);
   final int status;
   final String body;
 
   @override
   String toString() => '→ $status $body';
 }
+
+bool _isRedirect(int status) =>
+    status == 301 ||
+    status == 302 ||
+    status == 303 ||
+    status == 307 ||
+    status == 308;
 
 const authBaseUrl = String.fromEnvironment(
   'AUTH_BASE_URL',
