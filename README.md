@@ -17,7 +17,6 @@ on Neon Postgres + Managed Better Auth, with BYOK chat. See [`PLAN.md`](PLAN.md)
 | `go_router` | 18.0.2 | same |
 | `shelf` / `shelf_router` | ^1.4.2 / ^1.1.2 | server template |
 | `cryptography` | ^2.9.0 | Ed25519 verify (PLAN risk #2 fallback) |
-| `http` (app) | ^1.6.0 | Phase 0 auth spike REST client |
 | `flutter_lints` / `lints` | ^6.0.0 | template default |
 
 Coverage gate: ≥80% lines on `packages/core` (enforced from Phase 1).
@@ -89,26 +88,19 @@ Get a token: sign in via the Neon Auth endpoint
 Google OAuth + magic-link REST spike from Flutter is tracked for Phase 0 exit
 (manual checklist: web + Android attach + refresh).
 
-### Auth spike screen (closes the Phase 0 spike)
+### Auth spike (Phase 0, retired — findings kept)
 
-`app/lib/auth_spike.dart` (`/spike` route, dev-only): magic-link request,
-in-app verify-link fetch, session check, JWT fetch, Google sign-in URL —
-each step logged with raw status. Run it on both platforms:
+The throwaway spike screen (`/spike`: magic-link, in-app verify, session,
+JWT, Google URL) was removed after it delivered its findings; the remaining
+Android-verify assumption is logged in PLAN §9 row 9 and must be proven in
+Phase 2. Findings that stand:
 
-```bash
-cd app
-# Web: fixed port so Origin matches the callbackURL (server requires equality)
-flutter run -d chrome --web-port 5000
-# → callbackURL http://localhost:5000
-flutter run -d <android-device>                          # Android
-# → callbackURL https://bachi.dev/work (no Origin header → check skipped)
-# → "Open auth spike (dev-only)" → 1→2→3→4, then G
-```
-
-Pass = sign-in → session non-null → JWT decodes (`jwt_spike.dart` prints
-`OK sub=...`) → restart app → logged out (spike keeps cookies in memory
-only; Phase 2 adds secure storage). Google: open the returned `url` in a
-browser, sign in, then tap 3.
+- Magic-link request works from any client; callbackURL origin must equal the
+  request `Origin` (local web: `--web-port 5000` + `http://localhost:5000`;
+  Android/prod per PLAN §9 row 8).
+- Web cookie session attach is unworkable with plain `package:http`
+  (PLAN §9 row 7) — Phase 2 needs credentialed requests + CORS or a
+  non-cookie flow on web regardless.
 
 ## Env
 

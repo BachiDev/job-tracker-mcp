@@ -241,6 +241,7 @@ Supply chain:
 | 6 | Recruiter has no API key | Free-tier presets + scripted demo tour without a key (read-only trail) |
 | 7 | Web cookie session attach fails with plain `package:http` (fetch hides `Set-Cookie`, drops x-origin cookies, verify URL unreadable — CORS) — proven by Phase 0 spike log 2026-10-07 | Phase 2: credentialed requests + server CORS headers, or non-cookie flow (JWT/bearer/server proxy) |
 | 8 | Neon Auth requires callbackURL origin == request `Origin` (browsers always send it; non-browser clients skip the check) — proven 2026-10-07 | Local web: `--web-port 5000` + `http://localhost:5000` callback; Android (no Origin): `bachi.dev` callback; prod web (`bachi.dev` origin): `bachi.dev` callback |
+| 9 | Android in-app magic-link verify session capture *assumed* working (IOClient has no Origin header, manual cookie jar; spike retired before final on-device proof to stop burning Phase 0 resources) | Phase 2 must prove it on-device: if session attach fails there, fall back to browser-surface verify (Custom Tabs). Web finding (row 7) stands regardless |
 
 ## 10. Ship gate (all true before release)
 

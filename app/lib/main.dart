@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'auth_spike.dart';
-
 void main() {
   runApp(const ProviderScope(child: JobTrackerApp()));
 }
@@ -14,10 +12,6 @@ final _router = GoRouter(
     GoRoute(
       path: '/chat',
       builder: (context, state) => const PlaceholderScreen(title: 'Chat'),
-    ),
-    GoRoute(
-      path: '/spike',
-      builder: (context, state) => const AuthSpikeScreen(),
     ),
   ],
 );
@@ -63,11 +57,6 @@ class HomeScreen extends StatelessWidget {
             FilledButton(
               onPressed: () => context.go('/chat'),
               child: const Text('Open chat (placeholder)'),
-            ),
-            const SizedBox(height: 8),
-            OutlinedButton(
-              onPressed: () => context.go('/spike'),
-              child: const Text('Open auth spike (dev-only)'),
             ),
           ],
         ),
