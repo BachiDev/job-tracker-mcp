@@ -1,6 +1,7 @@
 name: server
 description: job-tracker-mcp API + MCP server (Dart shelf). REST + Streamable HTTP + stdio share one tool layer.
 version: 0.1.0
+publish_to: none
 
 environment:
   sdk: ^3.13.5
@@ -12,6 +13,8 @@ dependencies:
   mcp_dart: 2.4.2
   cryptography: ^2.9.0
   http: ^1.5.0
+  job_tracker_core:
+    path: ../packages/core
   meta: ^1.16.0
   postgres: ^3.5.20
 

@@ -1,0 +1,10 @@
+{
+  "name": "attention",
+  "user_goal": "what needs my attention?",
+  "expect_tools": ["stale_followups", "stats"],
+  "expect_gated": [],
+  "args": {
+    "stale_followups": {},
+    "stats": {}
+  }
+}

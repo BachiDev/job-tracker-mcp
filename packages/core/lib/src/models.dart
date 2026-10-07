@@ -165,7 +165,7 @@ class Interaction {
     userId: json['user_id'] as String,
     applicationId: json['application_id'] as String,
     type: json['type'] as String,
-    happenedAt: DateTime.parse(json['happened_at'] as String),
+    happenedAt: _dtReq(json['happened_at']),
     summary: json['summary'] as String?,
     followUpAt: _dt(json['follow_up_at']),
     createdAt: _dt(json['created_at']),
@@ -183,5 +183,13 @@ class Interaction {
   };
 }
 
-DateTime? _dt(Object? v) =>
-    v == null ? null : DateTime.parse(v as String);
+DateTime? _dt(Object? v) {
+  if (v == null) return null;
+  if (v is DateTime) return v;
+  return DateTime.parse(v as String);
+}
+
+DateTime _dtReq(Object? v) {
+  if (v is DateTime) return v;
+  return DateTime.parse(v as String);
+}

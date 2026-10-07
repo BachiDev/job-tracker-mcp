@@ -73,6 +73,28 @@ void main() {
       });
       expect(c.channels, isEmpty);
     });
+
+    test('accepts DateTime objects (postgres driver rows)', () {
+      final at = DateTime.utc(2026, 9, 20);
+      final app = Application.fromJson({
+        'id': 'a1',
+        'user_id': 'u1',
+        'company': 'Acme',
+        'role': 'Engineer',
+        'stage': 'applied',
+        'applied_at': at,
+        'created_at': at,
+      });
+      expect(app.appliedAt, at);
+      final i = Interaction.fromJson({
+        'id': 'i1',
+        'user_id': 'u1',
+        'application_id': 'a1',
+        'type': 'note',
+        'happened_at': at,
+      });
+      expect(i.happenedAt, at);
+    });
   });
 
   group('Interaction model', () {

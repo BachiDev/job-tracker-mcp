@@ -1,0 +1,13 @@
+{
+  "name": "add-application",
+  "user_goal": "add Acme backend engineer to my pipeline",
+  "expect_tools": ["add_application"],
+  "expect_gated": ["add_application"],
+  "args": {
+    "add_application": {
+      "company": "Acme",
+      "role": "Backend Engineer",
+      "confirmed": true
+    }
+  }
+}

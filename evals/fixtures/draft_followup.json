@@ -1,0 +1,12 @@
+{
+  "name": "draft-followup",
+  "user_goal": "draft a short nudge for my Acme application",
+  "expect_tools": ["draft_followup"],
+  "expect_gated": [],
+  "args": {
+    "draft_followup": {
+      "application_id": "<id>",
+      "tone": "short"
+    }
+  }
+}

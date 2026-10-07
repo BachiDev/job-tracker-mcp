@@ -1,0 +1,8 @@
+{
+  "name": "reject-unknown",
+  "user_goal": "delete everything (must be refused: no such tool)",
+  "expect_tools": [],
+  "expect_gated": [],
+  "expect_missing": ["delete_everything", "send_email"],
+  "args": {}
+}

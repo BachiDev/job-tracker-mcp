@@ -1,38 +1,36 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart';
-import 'package:shelf_router/shelf_router.dart';
 
-Router buildRouter() {
-  final router = Router()
-    ..get('/', _rootHandler)
-    ..get('/health', _healthHandler)
-    ..get('/echo/<message>', _echoHandler);
-  return router;
-}
+import 'package:server/api.dart';
+import 'package:server/auth/jwt_verify.dart';
+import 'package:server/store.dart';
 
-Response _rootHandler(Request req) =>
-    Response.ok('job-tracker-mcp server (Phase 0)\n');
-
-Response _healthHandler(Request req) => Response.ok(
-  jsonEncode({'ok': true, 'phase': 0}),
-  headers: {'content-type': 'application/json'},
-);
-
-Response _echoHandler(Request request) {
-  final message = request.params['message'];
-  return Response.ok('$message\n');
-}
-
+/// REST API entry point: JWT-gated CRUD over the pipeline.
+/// Env: DATABASE_URL (pooled), NEON_AUTH_JWKS_URL, PORT.
 Future<void> main(List<String> args) async {
-  final ip = InternetAddress.anyIPv4;
+  final databaseUrl = Platform.environment['DATABASE_URL'];
+  final jwksUrl = Platform.environment['NEON_AUTH_JWKS_URL'];
+  if (databaseUrl == null || databaseUrl.isEmpty) {
+    stderr.writeln('missing DATABASE_URL');
+    exit(2);
+  }
+  if (jwksUrl == null || jwksUrl.isEmpty) {
+    stderr.writeln('missing NEON_AUTH_JWKS_URL');
+    exit(2);
+  }
+
+  final store = Store.pool(databaseUrl);
+  final verifier = JwtVerifier(jwksUrl: jwksUrl);
   final handler = Pipeline()
       .addMiddleware(logRequests())
-      .addHandler(buildRouter().call);
+      .addHandler(
+        buildRouter(store: store, verify: verifier.verify).call,
+      );
+
   final port = int.parse(Platform.environment['PORT'] ?? '8080');
-  final server = await serve(handler, ip, port);
+  final server = await serve(handler, InternetAddress.anyIPv4, port);
   // ignore: avoid_print
   print('Server listening on port ${server.port}');
 }

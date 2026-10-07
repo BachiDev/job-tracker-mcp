@@ -1,11 +1,34 @@
+import 'dart:io';
+
 import 'package:mcp_dart/mcp_dart.dart';
 
-/// Phase 0 "hello tool" — stdio entry point.
+import 'package:server/mcp_tools.dart';
+import 'package:server/store.dart';
+
+/// MCP stdio entry point: the full v1 tool surface over stdio.
 ///
-/// Run: `dart run bin/mcp_stdio.dart`
-/// Verify: MCP Inspector / `npx @modelcontextprotocol/inspector dart run bin/mcp_stdio.dart`
-/// Then connect once from OpenCode (PLAN Phase 0 DoD).
-Future<void> main() async {
+/// Identity: local stdio trusts the local user only (documented). The caller
+/// identity comes from `--user <sub>` or `JOB_TRACKER_USER_ID` (your own
+/// Better Auth `sub` after sign-in). DB from `DATABASE_URL`.
+///
+/// Run: `dart run bin/mcp_stdio.dart --user <sub>`
+/// Verify: `npx @modelcontextprotocol/inspector --cli dart run bin/mcp_stdio.dart --user <sub> --method tools/list`
+Future<void> main(List<String> args) async {
+  String? userId = Platform.environment['JOB_TRACKER_USER_ID'];
+  for (var i = 0; i < args.length; i++) {
+    if (args[i] == '--user' && i + 1 < args.length) userId = args[++i];
+  }
+  final databaseUrl = Platform.environment['DATABASE_URL'];
+  if (userId == null || userId.isEmpty) {
+    stderr.writeln('usage: dart run bin/mcp_stdio.dart --user <sub>');
+    exit(2);
+  }
+  if (databaseUrl == null || databaseUrl.isEmpty) {
+    stderr.writeln('missing DATABASE_URL');
+    exit(2);
+  }
+
+  final store = Store.pool(databaseUrl);
   final server = McpServer(
     Implementation(name: 'job-tracker-mcp', version: '0.1.0'),
     options: McpServerOptions(
@@ -14,23 +37,7 @@ Future<void> main() async {
       ),
     ),
   );
-
-  server.registerTool(
-    'hello',
-    description: 'Phase 0 smoke tool. Returns a greeting.',
-    inputSchema: JsonSchema.object(
-      properties: {
-        'name': JsonSchema.string(description: 'Name to greet'),
-      },
-    ),
-    callback: (args, extra) async {
-      final name = (args['name'] as String?)?.trim();
-      final who = (name == null || name.isEmpty) ? 'world' : name;
-      return CallToolResult(
-        content: [TextContent(text: 'Hello, $who! (job-tracker-mcp Phase 0)')],
-      );
-    },
-  );
+  registerJobTrackerTools(server, store, userId);
 
   final transport = StdioServerTransport();
   await server.connect(transport);

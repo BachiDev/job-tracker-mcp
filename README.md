@@ -1,10 +1,11 @@
-# job-tracker-mcp (Phase 0)
+# job-tracker-mcp (Phase 1)
 
 Job-application tracker — Flutter app (web + APK) + Dart server (REST + MCP)
 on Neon Postgres + Managed Better Auth, with BYOK chat. See [`PLAN.md`](PLAN.md)
 (single source of truth).
 
-> Phase 0 status: scaffold + hello-tool + JWT spike. Pipeline UI lands in Phase 2.
+> Phase 1 status: data + tools. REST CRUD, 14 MCP tools, migrations, evals.
+> Manual DoD pending: Inspector tool list/call + OpenCode read-tool evidence.
 
 ## Pinned versions (Phase 0)
 
@@ -17,6 +18,8 @@ on Neon Postgres + Managed Better Auth, with BYOK chat. See [`PLAN.md`](PLAN.md)
 | `go_router` | 18.0.2 | same |
 | `shelf` / `shelf_router` | ^1.4.2 / ^1.1.2 | server template |
 | `cryptography` | ^2.9.0 | Ed25519 verify (PLAN risk #2 fallback) |
+| `postgres` | 3.5.20 | server DB driver (pinned at Phase 1 scaffold) |
+| `http` | ^1.5.0 | server JWKS fetch |
 | `flutter_lints` / `lints` | ^6.0.0 | template default |
 
 Coverage gate: ≥80% lines on `packages/core` (enforced from Phase 1).
@@ -43,18 +46,29 @@ cd ../app && flutter analyze --no-pub && flutter test
 cd server && dart run bin/server.dart
 # → http://localhost:8080/health
 
-# 4. MCP stdio hello-tool
-cd server && dart run bin/mcp_stdio.dart
-# Inspector: npx @modelcontextprotocol/inspector dart run bin/mcp_stdio.dart
+# 3b. Database (ci branch for tests; migrate is idempotent)
+dart run tool/migrate.dart --database-url "$TEST_DATABASE_URL"
+# --seed also applies V2 demo data (dev only, never prod)
+
+# 4. MCP stdio (full v1 surface; local user only by design)
+cd server
+JOB_TRACKER_USER_ID=<your-sub> DATABASE_URL=<url> dart run bin/mcp_stdio.dart --user <your-sub>
+# Inspector: npx @modelcontextprotocol/inspector --cli dart run bin/mcp_stdio.dart --user <sub> --method tools/list
 # OpenCode: connect once over stdio (see below)
+
+# 5. Evals (scripted, no LLM)
+cd server && dart run tool/evals.dart --dir ../evals/fixtures
 
 # 5. Web build smoke
 cd app && flutter build web --no-pub
 ```
 
-## MCP (Phase 0)
+## MCP (Phase 1)
 
-Stdio entry: `server/bin/mcp_stdio.dart` — one `hello` tool (`{name?}` → greeting).
+14 tools from `packages/core` (`toolDefs`), exposed over stdio
+(`server/bin/mcp_stdio.dart`). Reads free; writes need `confirmed: true`
+(chat confirm sheets set it after user approval); `draft_followup` is
+text-only; no delete/send tool exists.
 
 OpenCode local config snippet:
 
@@ -63,13 +77,23 @@ OpenCode local config snippet:
   "mcp": {
     "servers": {
       "job-tracker": {
-        "command": ["dart", "run", "bin/mcp_stdio.dart"],
-        "cwd": "<repo>/server"
+        "command": ["dart", "run", "bin/mcp_stdio.dart", "--user", "<your-sub>"],
+        "cwd": "<repo>/server",
+        "env": {
+          "DATABASE_URL": "<pooled-url>",
+          "JOB_TRACKER_USER_ID": "<your-sub>"
+        }
       }
     }
   }
 }
 ```
+
+## Privacy / deletion
+
+`DELETE /api/account` (Bearer JWT) deletes all rows of the caller
+(interactions → contacts → applications, transactional). Removing the auth
+user itself is a Neon console step (Auth → Users); the response states this.
 
 ## JWT spike (Phase 0 DoD)
 

@@ -37,11 +37,35 @@ jobs:
           cd ../../server && dart analyze --fatal-infos
           cd ../app && flutter analyze --no-pub
 
+      - name: Migrate ci branch (idempotent)
+        env:
+          DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
+        run: |
+          cd server && dart run tool/migrate.dart --dir ../db/migrations
+
       - name: Tests (core + server + widgets)
+        env:
+          TEST_DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
         run: |
           cd packages/core && dart test
           cd ../../server && dart test
           cd ../app && flutter test
+
+      - name: Core coverage gate (>=80% lines)
+        run: |
+          cd packages/core
+          dart test --coverage=coverage
+          dart pub global activate coverage
+          dart pub global run coverage:format_coverage --packages=.dart_tool/package_config.json --report-on=lib --lcov -o coverage/lcov.info -i coverage
+          total=$(grep -c '^DA:' coverage/lcov.info)
+          hit=$(grep '^DA:' coverage/lcov.info | awk -F'[,:]' '$3 > 0' | wc -l)
+          pct=$((100 * hit / total))
+          echo "core line coverage: $hit/$total ($pct%)"
+          [ "$pct" -ge 80 ]
+
+      - name: Evals (scripted, no LLM)
+        run: |
+          cd server && dart run tool/evals.dart --dir ../evals/fixtures
 
       - name: Build web (smoke)
         run: |

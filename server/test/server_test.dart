@@ -2,42 +2,72 @@ import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
 import 'package:test/test.dart';
 
-import '../bin/server.dart' as app;
+import 'package:server/api.dart';
+import 'package:server/auth/jwt_verify.dart';
+import 'package:server/store.dart';
 
-Router _router() => app.buildRouter();
+Store _noDb() => Store.pool('postgresql://u:p@localhost:5432/db');
 
-Future<Response> _get(String path) {
-  final req = Request('GET', Uri.parse('http://localhost$path'));
-  return _router().call(req);
+Future<Response> _get(Router router, String path, {String? token}) {
+  final headers = token == null
+      ? <String, String>{}
+      : {'authorization': 'Bearer $token'};
+  return router.call(
+    Request('GET', Uri.parse('http://localhost$path'), headers: headers),
+  );
 }
 
-void main() {
-  group('server smoke (Phase 0)', () {
-    test('GET /health returns ok:true', () async {
-      final res = await _get('/health');
-      expect(res.statusCode, 200);
-      expect(await res.readAsString(), contains('"ok":true'));
-    });
+Future<JwtClaims> _boom(String _) => throw const FormatException('bad');
+Future<JwtClaims> _ok(String _) async => JwtClaims(sub: 'u1', raw: {});
 
-    test('GET /echo/<message> echoes', () async {
-      final res = await _get('/echo/hello');
+void main() {
+  group('public surface', () {
+    test('GET /health needs no auth', () async {
+      final router = buildRouter(store: _noDb(), verify: _boom);
+      final res = await _get(router, '/health');
       expect(res.statusCode, 200);
-      expect(await res.readAsString(), 'hello\n');
+      expect(await res.readAsString(), contains('"phase":1'));
     });
 
     test('unknown route 404s', () async {
-      final res = await _get('/nope');
+      final router = buildRouter(store: _noDb(), verify: _boom);
+      final res = await _get(router, '/nope');
       expect(res.statusCode, 404);
     });
   });
 
-  group('jwt spike (Phase 0)', () {
-    test('malformed token throws (no fallback)', () async {
-      // Import lazily to keep this file free of async JWKS in CI.
-      // Full Ed25519 verification against the real JWKS is exercised
-      // manually via `dart run tool/jwt_spike.dart --token <JWT>`.
-      expect(() => 'not-a-jwt'.split('.'), isNotNull);
-      expect('not-a-jwt'.split('.').length == 3, isFalse);
+  group('auth gate', () {
+    test('missing token is 401 without touching the verifier', () async {
+      var called = false;
+      final router = buildRouter(
+        store: _noDb(),
+        verify: (t) async {
+          called = true;
+          return JwtClaims(sub: 'u1', raw: {});
+        },
+      );
+      final res = await _get(router, '/api/stats');
+      expect(res.statusCode, 401);
+      expect(called, isFalse);
+    });
+
+    test('malformed scheme is 401', () async {
+      final router = buildRouter(store: _noDb(), verify: _ok);
+      final res = await router.call(
+        Request(
+          'GET',
+          Uri.parse('http://localhost/api/stats'),
+          headers: {'authorization': 'Token abc'},
+        ),
+      );
+      expect(res.statusCode, 401);
+    });
+
+    test('verifier failure is 401', () async {
+      final router = buildRouter(store: _noDb(), verify: _boom);
+      final res = await _get(router, '/api/stats', token: 'bogus');
+      expect(res.statusCode, 401);
+      expect(await res.readAsString(), contains('invalid or expired'));
     });
   });
 }
