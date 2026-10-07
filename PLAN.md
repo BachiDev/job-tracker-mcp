@@ -239,6 +239,8 @@ Supply chain:
 | 4 | Neon Free caps (1 GB storage, CU-hours) | Tracker rows are tiny; monitor dashboard quarterly; branch-per-env discipline |
 | 5 | Scope creep (interview prep, CSV, digests) | Phase 4 only; v1 scope is §1 + §3, nothing more |
 | 6 | Recruiter has no API key | Free-tier presets + scripted demo tour without a key (read-only trail) |
+| 7 | Web cookie session attach fails with plain `package:http` (fetch hides `Set-Cookie`, drops x-origin cookies, verify URL unreadable — CORS) — proven by Phase 0 spike log 2026-10-07 | Phase 2: credentialed requests + server CORS headers, or non-cookie flow (JWT/bearer/server proxy) |
+| 8 | Neon Auth requires callbackURL origin == request `Origin` (browsers always send it; non-browser clients skip the check) — proven 2026-10-07 | Local web: `--web-port 5000` + `http://localhost:5000` callback; Android (no Origin): `bachi.dev` callback; prod web (`bachi.dev` origin): `bachi.dev` callback |
 
 ## 10. Ship gate (all true before release)
 
