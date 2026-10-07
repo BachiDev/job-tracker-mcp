@@ -271,5 +271,84 @@ void main() {
         await store.close();
       }
     });
+
+    test('param routes round-trip (regression: typed req.params)', () async {
+      if (url == null) {
+        markTestSkipped('no TEST_DATABASE_URL/DATABASE_URL');
+        return;
+      }
+      final store = Store.pool(url);
+      final router = buildRouter(store: store, verify: _ok);
+      try {
+        var res = await _call(
+          router,
+          'POST',
+          '/api/applications',
+          body: {'company': 'Acme', 'role': 'Eng'},
+        );
+        final id =
+            (jsonDecode(await res.readAsString()) as Map)['id'] as String;
+
+        res = await _call(router, 'GET', '/api/applications/$id');
+        expect(res.statusCode, 200);
+
+        res = await _call(
+          router,
+          'PATCH',
+          '/api/applications/$id',
+          body: {'stage': 'interview'},
+        );
+        expect(res.statusCode, 200);
+        expect(
+          (jsonDecode(await res.readAsString()) as Map)['stage'],
+          'interview',
+        );
+
+        res = await _call(
+          router,
+          'POST',
+          '/api/interactions',
+          body: {'application_id': id, 'type': 'note'},
+        );
+        expect(res.statusCode, 201);
+        final interId =
+            (jsonDecode(await res.readAsString()) as Map)['id'] as String;
+
+        res = await _call(
+          router,
+          'GET',
+          '/api/interactions?application_id=$id',
+        );
+        expect(res.statusCode, 200);
+
+        res = await _call(
+          router,
+          'PATCH',
+          '/api/interactions/$interId',
+          body: {'follow_up_at': '2030-01-01T00:00:00Z'},
+        );
+        expect(res.statusCode, 200);
+
+        res = await _call(router, 'POST', '/api/applications/$id/archive');
+        expect(res.statusCode, 200);
+
+        res = await _call(router, 'GET', '/api/contacts');
+        expect(res.statusCode, 200);
+
+        res = await _call(
+          router,
+          'POST',
+          '/api/contacts',
+          body: {'name': 'Jane'},
+        );
+        expect(res.statusCode, 201);
+
+        res = await _call(router, 'DELETE', '/api/account');
+        expect(res.statusCode, 200);
+      } finally {
+        await store.deleteAccount('u1');
+        await store.close();
+      }
+    });
   });
 }

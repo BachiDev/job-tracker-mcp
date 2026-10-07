@@ -60,7 +60,7 @@ Router buildRouter({required Store store, required VerifyToken verify}) {
         'expires_at': expiresAt.toIso8601String(),
       }, status: 201);
     })
-    ..get('/applications', (r) => _guard(r, verify, (sub, req) async {
+    ..get('/applications', (Request r) => _guard(r, verify, (sub, req) async {
       final q = req.url.queryParameters;
       final apps = await store.listApplications(
         sub,
@@ -70,11 +70,11 @@ Router buildRouter({required Store store, required VerifyToken verify}) {
       );
       return _json([for (final a in apps) a.toJson()]);
     }))
-    ..get('/applications/<id>', (r) => _guard(r, verify, (sub, req) async {
-      final app = await store.getApplication(sub, r.params['id']!);
+    ..get('/applications/<id>', (Request r) => _guard(r, verify, (sub, req) async {
+      final app = await store.getApplication(sub, req.params['id']!);
       return _json(app.toJson());
     }))
-    ..post('/applications', (r) => _guard(r, verify, (sub, req) async {
+    ..post('/applications', (Request r) => _guard(r, verify, (sub, req) async {
       final b = await _body(req);
       final app = await store.createApplication(
         sub,
@@ -90,16 +90,16 @@ Router buildRouter({required Store store, required VerifyToken verify}) {
       );
       return _json(app.toJson(), status: 201);
     }))
-    ..patch('/applications/<id>', (r) => _guard(r, verify, (sub, req) async {
+    ..patch('/applications/<id>', (Request r) => _guard(r, verify, (sub, req) async {
       final b = await _body(req);
-      final app = await store.updateStage(sub, r.params['id']!, _str(b, 'stage'));
+      final app = await store.updateStage(sub, req.params['id']!, _str(b, 'stage'));
       return _json(app.toJson());
     }))
-    ..post('/applications/<id>/archive', (r) => _guard(r, verify, (sub, req) async {
-      final app = await store.archiveApplication(sub, r.params['id']!);
+    ..post('/applications/<id>/archive', (Request r) => _guard(r, verify, (sub, req) async {
+      final app = await store.archiveApplication(sub, req.params['id']!);
       return _json(app.toJson());
     }))
-    ..get('/contacts', (r) => _guard(r, verify, (sub, req) async {
+    ..get('/contacts', (Request r) => _guard(r, verify, (sub, req) async {
       final q = req.url.queryParameters;
       final contacts = await store.listContacts(
         sub,
@@ -108,7 +108,7 @@ Router buildRouter({required Store store, required VerifyToken verify}) {
       );
       return _json([for (final c in contacts) c.toJson()]);
     }))
-    ..post('/contacts', (r) => _guard(r, verify, (sub, req) async {
+    ..post('/contacts', (Request r) => _guard(r, verify, (sub, req) async {
       final b = await _body(req);
       final channels = b['channels'];
       final c = await store.createContact(
@@ -125,7 +125,7 @@ Router buildRouter({required Store store, required VerifyToken verify}) {
       );
       return _json(c.toJson(), status: 201);
     }))
-    ..get('/interactions', (r) => _guard(r, verify, (sub, req) async {
+    ..get('/interactions', (Request r) => _guard(r, verify, (sub, req) async {
       final q = req.url.queryParameters;
       final appId = q['application_id'];
       if (appId == null || appId.isEmpty) {
@@ -138,7 +138,7 @@ Router buildRouter({required Store store, required VerifyToken verify}) {
       );
       return _json([for (final i in items) i.toJson()]);
     }))
-    ..post('/interactions', (r) => _guard(r, verify, (sub, req) async {
+    ..post('/interactions', (Request r) => _guard(r, verify, (sub, req) async {
       final b = await _body(req);
       final i = await store.logInteraction(
         sub,
@@ -150,24 +150,24 @@ Router buildRouter({required Store store, required VerifyToken verify}) {
       );
       return _json(i.toJson(), status: 201);
     }))
-    ..patch('/interactions/<id>', (r) => _guard(r, verify, (sub, req) async {
+    ..patch('/interactions/<id>', (Request r) => _guard(r, verify, (sub, req) async {
       final b = await _body(req);
       final fu = _optDt(b, 'follow_up_at');
       if (fu == null) throw InputError('follow_up_at is required');
-      final i = await store.setFollowUp(sub, r.params['id']!, fu);
+      final i = await store.setFollowUp(sub, req.params['id']!, fu);
       return _json(i.toJson());
     }))
-    ..get('/stale_followups', (r) => _guard(r, verify, (sub, req) async {
+    ..get('/stale_followups', (Request r) => _guard(r, verify, (sub, req) async {
       final stale = await store.staleFollowups(
         sub,
         limit: _int(req.url.queryParameters['limit'], 50),
       );
       return _json(stale);
     }))
-    ..get('/stats', (r) => _guard(r, verify, (sub, req) async {
+    ..get('/stats', (Request r) => _guard(r, verify, (sub, req) async {
       return _json(await store.stats(sub));
     }))
-    ..delete('/account', (r) => _guard(r, verify, (sub, req) async {
+    ..delete('/account', (Request r) => _guard(r, verify, (sub, req) async {
       final deleted = await store.deleteAccount(sub);
       return _json({
         'deleted_rows': deleted,
