@@ -1,11 +1,10 @@
-# job-tracker-mcp (Phase 1)
+# job-tracker-mcp (Phase 2)
 
 Job-application tracker — Flutter app (web + APK) + Dart server (REST + MCP)
 on Neon Postgres + Managed Better Auth, with BYOK chat. See [`PLAN.md`](PLAN.md)
 (single source of truth).
 
-> Phase 1 status: data + tools. REST CRUD, 14 MCP tools, migrations, evals.
-> MCP interop verified 2026-10-07 via Inspector CLI (transcript below).
+> Phase 2 status: portfolio-visible app — theme, auth, pipeline, chat, demo.
 
 ## MCP (Phase 1)
 
@@ -94,9 +93,15 @@ cd packages/core && dart analyze --fatal-infos && dart test
 cd ../../server && dart analyze --fatal-infos && dart test
 cd ../app && flutter analyze --no-pub && flutter test
 
-# 3. Server (REST skeleton)
+# 3. Server (REST + demo bootstrap)
 cd server && dart run bin/server.dart
 # → http://localhost:8080/health
+# Demo accounts: POST /api/demo/bootstrap (rate-limited, 72h TTL)
+
+# 3b. Device testing against local server (phone can't reach laptop localhost)
+adb reverse tcp:8080 tcp:8080
+# then flutter run with --dart-define=API_BASE_URL=http://localhost:8080
+# (the phone's localhost now tunnels to this machine)
 
 # 3b. Database (ci branch for tests; migrate is idempotent)
 dart run tool/migrate.dart --database-url "$TEST_DATABASE_URL"
@@ -113,6 +118,26 @@ cd server && dart run tool/evals.dart --dir ../evals/fixtures
 
 # 5. Web build smoke
 cd app && flutter build web --no-pub
+
+## App (Phase 2)
+
+Theme: Material 3 dark (zinc-950/violet), bundled Inter + JetBrains Mono.
+Screens: sign-in (magic link + one-tap demo, `?demo=1` auto-bootstraps),
+pipeline (board ≥700px / list below, stats strip, stale callouts),
+application detail + timeline, contacts, BYOK chat (tool trail + confirm
+sheets), settings (provider presets + keys, privacy note, delete path).
+
+```bash
+cd app
+flutter run -d chrome --web-port 5000 \
+  --dart-define=API_BASE_URL=http://localhost:8080
+flutter run -d <android-device> \
+  --dart-define=API_BASE_URL=http://localhost:8080  # + adb reverse, see above
+```
+
+BYOK: Settings → provider preset → paste key (secure storage / browser
+storage, per provider, user-clearable; sent only to that provider's API).
+No key needed to browse pipeline/demo; chat requires one.
 ```
 
 ## Privacy / deletion

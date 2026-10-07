@@ -50,6 +50,49 @@ void main() {
     });
   });
 
+  group('draft template', () {
+    test('grounded in real context, labeled unsent', () {
+      final text = buildDraft(
+        app: Application(
+          id: 'a1',
+          userId: 'u1',
+          company: 'Acme',
+          role: 'Engineer',
+          stage: AppStage.interview,
+        ),
+        recent: [
+          Interaction(
+            id: 'i1',
+            userId: 'u1',
+            applicationId: 'a1',
+            type: 'call',
+            happenedAt: DateTime.utc(2026, 10, 5),
+            summary: 'screening call',
+          ),
+        ],
+        tone: 'short',
+      );
+      expect(text, contains('draft — nothing was sent'));
+      expect(text, contains('Acme'));
+      expect(text, contains('screening call'));
+      expect(text, contains('short'));
+    });
+
+    test('works without history or tone', () {
+      final text = buildDraft(
+        app: Application(
+          id: 'a1',
+          userId: 'u1',
+          company: 'Acme',
+          role: 'Engineer',
+          stage: AppStage.saved,
+        ),
+        recent: const [],
+      );
+      expect(text, contains('neutral'));
+    });
+  });
+
   group('Contact model', () {
     test('json roundtrip with channels', () {
       final c = Contact(

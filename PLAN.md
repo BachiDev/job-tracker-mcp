@@ -242,6 +242,7 @@ Supply chain:
 | 7 | Web cookie session attach fails with plain `package:http` (fetch hides `Set-Cookie`, drops x-origin cookies, verify URL unreadable — CORS) — proven by Phase 0 spike log 2026-10-07 | Phase 2: credentialed requests + server CORS headers, or non-cookie flow (JWT/bearer/server proxy) |
 | 8 | Neon Auth requires callbackURL origin == request `Origin` (browsers always send it; non-browser clients skip the check) — proven 2026-10-07 | Local web: `--web-port 5000` + `http://localhost:5000` callback; Android (no Origin): `bachi.dev` callback; prod web (`bachi.dev` origin): `bachi.dev` callback |
 | 9 | Android in-app magic-link verify session capture *assumed* working (IOClient has no Origin header, manual cookie jar; spike retired before final on-device proof to stop burning Phase 0 resources) | Phase 2 must prove it on-device: if session attach fails there, fall back to browser-surface verify (Custom Tabs). Web finding (row 7) stands regardless |
+| 10 | Google sign-in has no in-app button in Phase 2 (magic-link + one-tap demo instead), despite decision 13 ranking it first | Rationale: on-device session attach is unproven for any browser-mediated flow (rows 7+9); a dead-end Google button would be worse than honest scope. Console provider stays enabled. Revisit when a browser-surface verify is proven |
 
 ## 10. Ship gate (all true before release)
 

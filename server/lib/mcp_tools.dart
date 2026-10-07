@@ -183,22 +183,7 @@ Future<String> _draft(
 ) async {
   final app = await store.getApplication(userId, applicationId);
   final interactions = await store.getInteractions(userId, applicationId, limit: 3);
-  final last = interactions.isEmpty ? null : interactions.first.summary;
-  final buf = StringBuffer()
-    ..writeln('draft — nothing was sent.')
-    ..writeln('To: <hiring contact at ${app.company}>')
-    ..writeln('Re: ${app.role} application (${app.stage.name})')
-    ..writeln()
-    ..writeln(
-      'Hi, following up on my ${app.role} application at ${app.company}.',
-    );
-  if (last != null) buf.writeln('Last touch: $last.');
-  buf
-    ..writeln('Still very interested — happy to share anything that helps.')
-    ..writeln('Best regards')
-    ..writeln()
-    ..writeln('(tone requested: ${tone ?? 'neutral'})');
-  return buf.toString();
+  return buildDraft(app: app, recent: interactions, tone: tone);
 }
 
 String _req(Map<String, dynamic> args, String key) {
