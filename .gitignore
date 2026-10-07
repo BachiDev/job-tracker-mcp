@@ -1,0 +1,25 @@
+# Secrets + generated files — never commit
+.env
+.env.local
+.env.*.local
+
+# Neon CLI local context (project link; safe either way, keep local)
+.neon/
+
+# Node (neon.ts tooling only)
+node_modules/
+
+# Flutter / Dart (added at scaffold)
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+build/
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
+
+# IDE
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+.idea/
+*.iml

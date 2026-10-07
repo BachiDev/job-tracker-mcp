@@ -1,0 +1,1 @@
+﻿-- V1__init.sql lands in Phase 1 (PLAN). Phase 0: folder exists so CI + migrate script have a stable path.

@@ -1,0 +1,27 @@
+name: job-tracker-mcp
+repository: https://github.com/BachiDev/job-tracker-mcp
+
+packages:
+  - app
+  - packages/core
+  - server
+
+scripts:
+  analyze:
+    run: |
+      melos exec -- "dart analyze --fatal-infos"
+      melos exec --scope job_tracker -- "flutter analyze --no-pub"
+    description: Analyze all packages (fatal infos)
+  test:
+    run: melos exec -- "dart test"
+    description: Run dart tests (core + server)
+  get:
+    run: melos exec -- "dart pub get"
+    description: Fetch dependencies
+
+  app:test:
+    run: melos exec --scope job_tracker -- "flutter test"
+    description: Run Flutter widget tests
+  app:build:web:
+    run: melos exec --scope job_tracker -- "flutter build web --no-pub"
+    description: Build Flutter web (CI smoke)

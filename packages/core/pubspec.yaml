@@ -1,0 +1,12 @@
+name: job_tracker_core
+description: Shared pure-Dart domain layer for job-tracker-mcp (models, stage machine, validators, tool schemas). No Flutter.
+version: 0.1.0
+
+environment:
+  sdk: ^3.13.5
+
+dependencies: {}
+
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.25.6
