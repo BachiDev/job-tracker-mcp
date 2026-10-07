@@ -25,10 +25,11 @@ jobs:
           dart --version
           flutter --version
 
-      - name: Pub get (core + server)
+      - name: Pub get (core + server + app)
         run: |
           cd packages/core && dart pub get
           cd ../../server && dart pub get
+          cd ../app && flutter pub get
 
       - name: Analyze (fatal infos)
         run: |
