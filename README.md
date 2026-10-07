@@ -5,7 +5,59 @@ on Neon Postgres + Managed Better Auth, with BYOK chat. See [`PLAN.md`](PLAN.md)
 (single source of truth).
 
 > Phase 1 status: data + tools. REST CRUD, 14 MCP tools, migrations, evals.
-> Manual DoD pending: Inspector tool list/call + OpenCode read-tool evidence.
+> MCP interop verified 2026-10-07 via Inspector CLI (transcript below).
+
+## MCP (Phase 1)
+
+14 tools from `packages/core` (`toolDefs`), exposed over stdio
+(`server/bin/mcp_stdio.dart`). Reads free; writes need `confirmed: true`
+(chat confirm sheets set it after user approval); `draft_followup` is
+text-only; no delete/send tool exists.
+
+Verified end-to-end 2026-10-07 with an independent client
+(`@modelcontextprotocol/inspector --cli`, against the `ci` branch):
+
+```text
+$ npx @modelcontextprotocol/inspector --cli \
+    --config .mcp-inspector.local.json --server job-tracker \
+    --method tools/list
+# → list_applications, get_application, pipeline_summary, stale_followups,
+#   list_contacts, get_interactions, stats, add_application, update_stage,
+#   log_interaction, add_contact, schedule_followup, archive_application,
+#   draft_followup  (14/14 with schemas)
+
+$ ... --method tools/call --tool-name stats
+# → {"total_active":0,"by_stage":{},"stale_count":0,"total_contacts":0,
+#    "upcoming_followups_14d":0}
+
+$ ... --method tools/call --tool-name add_application \
+    --tool-arg company=Acme --tool-arg role=Eng   # no confirmed flag
+# → isError:true "Required property is missing: confirmed"
+#    (SDK schema validation refuses the unconfirmed write before it executes)
+```
+
+Note: server flags (e.g. `--user`) must go through the `--config` file form —
+the positional CLI form swallows them. `server/.mcp-inspector.local.json`
+(gitignored) holds the working invocation; `DATABASE_URL` flows via env.
+
+OpenCode local config snippet (same server, your sub + pooled URL):
+
+```json
+{
+  "mcp": {
+    "servers": {
+      "job-tracker": {
+        "command": ["dart", "run", "bin/mcp_stdio.dart", "--user", "<your-sub>"],
+        "cwd": "<repo>/server",
+        "env": {
+          "DATABASE_URL": "<pooled-url>",
+          "JOB_TRACKER_USER_ID": "<your-sub>"
+        }
+      }
+    }
+  }
+}
+```
 
 ## Pinned versions (Phase 0)
 
@@ -61,32 +113,6 @@ cd server && dart run tool/evals.dart --dir ../evals/fixtures
 
 # 5. Web build smoke
 cd app && flutter build web --no-pub
-```
-
-## MCP (Phase 1)
-
-14 tools from `packages/core` (`toolDefs`), exposed over stdio
-(`server/bin/mcp_stdio.dart`). Reads free; writes need `confirmed: true`
-(chat confirm sheets set it after user approval); `draft_followup` is
-text-only; no delete/send tool exists.
-
-OpenCode local config snippet:
-
-```json
-{
-  "mcp": {
-    "servers": {
-      "job-tracker": {
-        "command": ["dart", "run", "bin/mcp_stdio.dart", "--user", "<your-sub>"],
-        "cwd": "<repo>/server",
-        "env": {
-          "DATABASE_URL": "<pooled-url>",
-          "JOB_TRACKER_USER_ID": "<your-sub>"
-        }
-      }
-    }
-  }
-}
 ```
 
 ## Privacy / deletion

@@ -6,6 +6,9 @@
 # Neon CLI local context (project link; safe either way, keep local)
 .neon/
 
+# Local Inspector config (own DATABASE_URL via env/-e, never commit secrets)
+server/.mcp-inspector.local.json
+
 # Node (neon.ts tooling only)
 node_modules/
 
