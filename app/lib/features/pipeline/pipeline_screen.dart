@@ -7,6 +7,7 @@ import '../../core/api_client.dart';
 import '../../core/providers.dart';
 import '../../core/session.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/app_shell.dart';
 import '../../widgets/common.dart';
 
 final _appsProvider = FutureProvider<List<Application>>((ref) {
@@ -35,30 +36,10 @@ class PipelineScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final session = ref.watch(sessionProvider).value;
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          session?.isDemo == true ? 'Pipeline (Demo data)' : 'Pipeline',
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.people_outline),
-            tooltip: 'Contacts',
-            onPressed: () => context.go('/contacts'),
-          ),
-          IconButton(
-            icon: const Icon(Icons.chat_bubble_outline),
-            tooltip: 'Chat',
-            onPressed: () => context.go('/chat'),
-          ),
-          IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            tooltip: 'Settings',
-            onPressed: () => context.go('/settings'),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
+    return AppShell(
+      tab: AppTab.pipeline,
+      title: session?.isDemo == true ? 'Pipeline (Demo data)' : 'Pipeline',
+      fab: FloatingActionButton(
         onPressed: () => _addSheet(context, ref),
         tooltip: 'Add application',
         child: const Icon(Icons.add),
@@ -67,15 +48,15 @@ class PipelineScreen extends ConsumerWidget {
         onRefresh: () async => _refresh(ref),
         child: ListView(
           padding: const EdgeInsets.all(16),
-          children: [
-            const Kicker(text: 'overview'),
-            const _StatsStrip(),
-            const SizedBox(height: 16),
-            const Kicker(text: 'needs attention'),
-            const _StaleSection(),
-            const SizedBox(height: 16),
-            const Kicker(text: 'pipeline'),
-            const _PipelineBody(),
+          children: const [
+            Kicker(text: 'overview'),
+            _StatsStrip(),
+            SizedBox(height: 16),
+            Kicker(text: 'needs attention'),
+            _StaleSection(),
+            SizedBox(height: 16),
+            Kicker(text: 'pipeline'),
+            _PipelineBody(),
           ],
         ),
       ),

@@ -71,6 +71,9 @@ class FakeApi extends ApiClient {
       apps.firstWhere((a) => a.id == id);
 
   @override
+  Future<List<Contact>> listContacts({String? applicationId}) async => [];
+
+  @override
   Future<List<Interaction>> getInteractions(String applicationId) async => [];
 
   @override

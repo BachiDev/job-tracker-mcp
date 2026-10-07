@@ -8,6 +8,7 @@ import '../../core/llm_keys.dart';
 import '../../core/providers.dart';
 import '../../core/session.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/app_shell.dart';
 import '../../widgets/common.dart';
 
 /// Settings: BYOK provider presets + keys, demo info, privacy, danger zone.
@@ -65,8 +66,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final session = ref.watch(sessionProvider).value;
-    return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+    return AppShell(
+      tab: AppTab.settings,
+      title: 'Settings',
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

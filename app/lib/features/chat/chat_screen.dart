@@ -2,11 +2,11 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../core/agent.dart';
 import '../../core/providers.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/app_shell.dart';
 import '../../widgets/common.dart';
 
 /// Agent chat: streaming text, tool-call trail, confirm sheets for writes.
@@ -113,17 +113,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     final trail = ref.watch(agentProvider);
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Chat'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            tooltip: 'Provider & key',
-            onPressed: () => context.go('/settings'),
-          ),
-        ],
-      ),
+    return AppShell(
+      tab: AppTab.chat,
+      title: 'Chat',
       body: Column(
         children: [
           if (_presetNote != null)

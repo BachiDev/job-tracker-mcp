@@ -4,6 +4,7 @@ import 'package:job_tracker_core/job_tracker_core.dart';
 
 import '../../core/api_client.dart';
 import '../../core/providers.dart';
+import '../../widgets/app_shell.dart';
 import '../../widgets/common.dart';
 
 final _contactsProvider = FutureProvider<List<Contact>>((ref) {
@@ -17,9 +18,10 @@ class ContactsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final contacts = ref.watch(_contactsProvider);
-    return Scaffold(
-      appBar: AppBar(title: const Text('Contacts')),
-      floatingActionButton: FloatingActionButton(
+    return AppShell(
+      tab: AppTab.contacts,
+      title: 'Contacts',
+      fab: FloatingActionButton(
         onPressed: () => _addSheet(context, ref),
         tooltip: 'Add contact',
         child: const Icon(Icons.add),
