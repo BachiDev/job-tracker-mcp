@@ -42,11 +42,12 @@ class SpikeApi {
       final req = http.Request('GET', uri)..followRedirects = false;
       req.headers.addAll(_headers());
       final res = await http.Response.fromStream(await _client.send(req));
+      final loc = res.headers['location'];
       onTrace?.call(
-        'hop: ${res.statusCode} headers=${res.headers.keys.toList()}',
+        'hop: ${res.statusCode} location=$loc '
+        'headers=${res.headers.keys.toList()}',
       );
       _storeCookies(res);
-      final loc = res.headers['location'];
       if (_isRedirect(res.statusCode) && loc != null) {
         uri = uri.resolve(loc);
         continue;
