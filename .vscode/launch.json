@@ -1,0 +1,47 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "server (shelf)",
+      "type": "dart",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/server",
+      "program": "bin/server.dart",
+      // DATABASE_URL + NEON_AUTH_JWKS_URL, maintained by `npx neon deploy`.
+      "envFile": "${workspaceFolder}/.env.local"
+    },
+    {
+      "name": "app (Chrome)",
+      "type": "dart",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/app",
+      "program": "lib/main.dart",
+      "args": [
+        "-d",
+        "chrome",
+        "--web-port",
+        "5000",
+        "--dart-define=API_BASE_URL=http://localhost:8080"
+      ]
+    },
+    {
+      "name": "app (Android)",
+      "type": "dart",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/app",
+      "program": "lib/main.dart",
+      "preLaunchTask": "adb reverse",
+      "args": [
+        "-d",
+        "android",
+        "--dart-define=API_BASE_URL=http://localhost:8080"
+      ]
+    }
+  ],
+  "compounds": [
+    {
+      "name": "full stack (server + Chrome)",
+      "configurations": ["server (shelf)", "app (Chrome)"]
+    }
+  ]
+}

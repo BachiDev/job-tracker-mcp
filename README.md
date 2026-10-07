@@ -127,6 +127,17 @@ pipeline (board ≥700px / list below, stats strip, stale callouts),
 application detail + timeline, contacts, BYOK chat (tool trail + confirm
 sheets), settings (provider presets + keys, privacy note, delete path).
 
+### Dev loop (VS Code, F5)
+
+`.vscode/launch.json` holds it: `server (shelf)` reads `.env.local`
+(maintained by `npx neon deploy`), `app (Chrome)` and `app (Android)` point
+at the local server, and the `full stack (server + Chrome)` compound starts
+both. The Android config runs the `adb reverse` task first so the phone
+reaches the laptop server. No Docker, no local Postgres — the database is
+the `ci` Neon branch over the wire.
+
+Terminal equivalent:
+
 ```bash
 cd app
 flutter run -d chrome --web-port 5000 \
