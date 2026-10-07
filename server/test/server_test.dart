@@ -4,6 +4,7 @@ import 'package:test/test.dart';
 
 import 'package:server/api.dart';
 import 'package:server/auth/jwt_verify.dart';
+import 'package:server/cors.dart';
 import 'package:server/store.dart';
 
 Store _noDb() => Store.pool('postgresql://u:p@localhost:5432/db');
@@ -89,6 +90,65 @@ void main() {
       final res = await _get(router, '/api/stats', token: 'bogus');
       expect(res.statusCode, 401);
       expect(await res.readAsString(), contains('invalid or expired'));
+    });
+  });
+
+  group('cors', () {
+    Handler withCors() {
+      final pipeline = Pipeline().addMiddleware(
+        cors(extraOrigins: const ['https://app.example']),
+      );
+      return pipeline.addHandler((req) => Response.ok('ok'));
+    }
+
+    test('preflight answers allowed origins', () async {
+      final handler = withCors();
+      final res = await handler(
+        Request(
+          'OPTIONS',
+          Uri.parse('http://localhost/api/stats'),
+          headers: {'origin': 'http://localhost:5000'},
+        ),
+      );
+      expect(res.statusCode, 204);
+      expect(
+        res.headers['access-control-allow-origin'],
+        'http://localhost:5000',
+      );
+    });
+
+    test('preflight omits ACAO for strangers', () async {
+      final handler = withCors();
+      final res = await handler(
+        Request(
+          'OPTIONS',
+          Uri.parse('http://localhost/api/stats'),
+          headers: {'origin': 'https://evil.example'},
+        ),
+      );
+      expect(res.statusCode, 204);
+      expect(res.headers['access-control-allow-origin'], isNull);
+    });
+
+    test('responses echo allowed origins + vary', () async {
+      final handler = withCors();
+      final res = await handler(
+        Request(
+          'GET',
+          Uri.parse('http://localhost/api/stats'),
+          headers: {'origin': 'https://app.example'},
+        ),
+      );
+      expect(res.headers['access-control-allow-origin'], 'https://app.example');
+      expect(res.headers['vary'], 'Origin');
+    });
+
+    test('parseExtraOrigins splits and trims', () {
+      expect(parseExtraOrigins(null), isEmpty);
+      expect(
+        parseExtraOrigins(' https://a.example,,https://b.example '),
+        ['https://a.example', 'https://b.example'],
+      );
     });
   });
 }

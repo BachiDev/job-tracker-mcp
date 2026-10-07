@@ -5,6 +5,7 @@ import 'package:shelf/shelf_io.dart';
 
 import 'package:server/api.dart';
 import 'package:server/auth/jwt_verify.dart';
+import 'package:server/cors.dart';
 import 'package:server/env.dart';
 import 'package:server/store.dart';
 
@@ -29,6 +30,7 @@ Future<void> main(List<String> args) async {
   final verify = dualVerify(jwt: verifier.verify, store: store);
   final handler = Pipeline()
       .addMiddleware(logRequests())
+      .addMiddleware(cors(extraOrigins: parseExtraOrigins(env['CORS_ORIGINS'])))
       .addHandler(buildRouter(store: store, verify: verify).call);
 
   final port = int.parse(env['PORT'] ?? '8080');
