@@ -136,7 +136,10 @@ class _AuthSpikeScreenState extends State<AuthSpikeScreen> {
     onSend: (body) => _say('  sent: $body'),
   );
   final _email = TextEditingController(text: 'fabian@bachi.dev');
-  final _callback = TextEditingController(text: 'https://bachi.dev/work');
+  // Local web sends Origin: http://localhost:<port> and the server requires
+  // callbackURL to match it — run with --web-port 5000 and keep this in sync.
+  // Android sends no Origin header, so the https callback works there.
+  final _callback = TextEditingController();
   final _verifyUrl = TextEditingController();
   final _log = <String>[];
   bool _busy = false;
@@ -179,7 +182,10 @@ class _AuthSpikeScreenState extends State<AuthSpikeScreen> {
           ),
           TextField(
             controller: _callback,
-            decoration: const InputDecoration(labelText: 'Callback URL'),
+            decoration: const InputDecoration(
+              labelText: 'Callback URL',
+              hintText: 'web: http://localhost:5000 · android: https://bachi.dev/work',
+            ),
           ),
           TextField(
             controller: _verifyUrl,

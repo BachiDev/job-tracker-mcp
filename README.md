@@ -97,8 +97,11 @@ each step logged with raw status. Run it on both platforms:
 
 ```bash
 cd app
-flutter run -d chrome                                    # web
+# Web: fixed port so Origin matches the callbackURL (server requires equality)
+flutter run -d chrome --web-port 5000
+# → callbackURL http://localhost:5000
 flutter run -d <android-device>                          # Android
+# → callbackURL https://bachi.dev/work (no Origin header → check skipped)
 # → "Open auth spike (dev-only)" → 1→2→3→4, then G
 ```
 
