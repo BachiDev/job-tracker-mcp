@@ -8,7 +8,7 @@ import 'package:http/http.dart' as http;
 /// platform differences (cookies on web vs Android, CORS) surface here,
 /// not in Phase 2. Not shipped: no persistence, no polish.
 class SpikeApi {
-  SpikeApi({required this.baseUrl, http.Client? client, this.onSend})
+  SpikeApi({required this.baseUrl, http.Client? client, this.onSend, this.onTrace})
     : _client = client ?? http.Client();
 
   final String baseUrl;
@@ -16,6 +16,9 @@ class SpikeApi {
 
   /// Hook for logging the exact outgoing body (dev-only observability).
   final void Function(String body)? onSend;
+
+  /// Hook for per-hop trace lines (status + header *names* only, no values).
+  final void Function(String line)? onTrace;
   final Map<String, String> _cookies = {};
 
   /// Cookie names currently held (values never exposed).
@@ -39,6 +42,9 @@ class SpikeApi {
       final req = http.Request('GET', uri)..followRedirects = false;
       req.headers.addAll(_headers());
       final res = await http.Response.fromStream(await _client.send(req));
+      onTrace?.call(
+        'hop: ${res.statusCode} headers=${res.headers.keys.toList()}',
+      );
       _storeCookies(res);
       final loc = res.headers['location'];
       if (_isRedirect(res.statusCode) && loc != null) {
@@ -155,6 +161,7 @@ class _AuthSpikeScreenState extends State<AuthSpikeScreen> {
   late final SpikeApi _api = SpikeApi(
     baseUrl: authBaseUrl,
     onSend: (body) => _say('  sent: $body'),
+    onTrace: _say,
   );
   final _email = TextEditingController(text: 'fabian@bachi.dev');
   // Local web sends Origin: http://localhost:<port> and the server requires
