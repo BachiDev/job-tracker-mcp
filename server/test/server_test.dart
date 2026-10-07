@@ -36,6 +36,27 @@ void main() {
     });
   });
 
+  group('demo accounts', () {
+    test('demoAllowed sliding window (pure)', () {
+      final now = DateTime.utc(2026, 10, 8);
+      expect(demoAllowed([], now), isTrue);
+      expect(
+        demoAllowed(
+          [for (var i = 0; i < 10; i++) now.subtract(Duration(minutes: i))],
+          now,
+        ),
+        isFalse,
+      );
+      expect(
+        demoAllowed(
+          [for (var i = 0; i < 10; i++) now.subtract(const Duration(hours: 2))],
+          now,
+        ),
+        isTrue,
+      );
+    });
+  });
+
   group('auth gate', () {
     test('missing token is 401 without touching the verifier', () async {
       var called = false;

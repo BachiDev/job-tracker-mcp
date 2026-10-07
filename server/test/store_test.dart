@@ -21,18 +21,20 @@ String _user() =>
     'test-${DateTime.now().microsecondsSinceEpoch}-${_userN++}';
 
 Future<JwtClaims> _ok(String _) async => JwtClaims(sub: 'u1', raw: {});
+Future<JwtClaims> _boom(String _) => throw const FormatException('bad');
 
 Future<Response> _call(
   Router router,
   String method,
   String path, {
   Map<String, dynamic>? body,
+  String token = 'x',
 }) {
   final req = Request(
     method,
     Uri.parse('http://localhost$path'),
     headers: {
-      'authorization': 'Bearer x',
+      'authorization': 'Bearer $token',
       if (body != null) 'content-type': 'application/json',
     },
     body: body == null ? null : jsonEncode(body),
@@ -186,6 +188,51 @@ void main() {
       } finally {
         await store.deleteAccount(a);
         await store.deleteAccount(b);
+        await store.close();
+      }
+    });
+  });
+
+  group('demo accounts (live)', () {
+    test('bootstrap → seed → bearer CRUD → expiry', () async {
+      if (url == null) {
+        markTestSkipped('no TEST_DATABASE_URL/DATABASE_URL');
+        return;
+      }
+      final store = Store.pool(url);
+      final router = buildRouter(
+        store: store,
+        verify: dualVerify(jwt: _boom, store: store),
+      );
+      try {
+        // public bootstrap (no auth)
+        final boot = await _call(router, 'POST', '/api/demo/bootstrap');
+        expect(boot.statusCode, 201);
+        final body =
+            jsonDecode(await boot.readAsString()) as Map<String, dynamic>;
+        final token = body['token'] as String;
+        expect(token.length, 64);
+
+        // bearer works through the dual-issuer gate
+        final authed = dualVerify(jwt: _boom, store: store);
+        final claims = await authed(token);
+        expect(claims.sub, (body['user_id'] as String));
+
+        // seeded dataset visible to the demo user (same pool: one Store
+        // per test, mirroring the single-pool server process)
+        final apps = await store.listApplications(claims.sub);
+        expect(apps.length, 6);
+        final stats = await store.stats(claims.sub);
+        expect(stats['total_active'], greaterThanOrEqualTo(4));
+        expect(stats['stale_count'], greaterThanOrEqualTo(1));
+
+        // unknown bearer still 401s (through the real guard path)
+        final denied = await _call(router, 'GET', '/api/stats', token: 'f' * 64);
+        expect(denied.statusCode, 401);
+
+        // cleanup demo rows
+        await store.deleteAccount(claims.sub);
+      } finally {
         await store.close();
       }
     });

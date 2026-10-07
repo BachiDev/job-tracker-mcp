@@ -23,11 +23,10 @@ Future<void> main(List<String> args) async {
 
   final store = Store.pool(databaseUrl);
   final verifier = JwtVerifier(jwksUrl: jwksUrl);
+  final verify = dualVerify(jwt: verifier.verify, store: store);
   final handler = Pipeline()
       .addMiddleware(logRequests())
-      .addHandler(
-        buildRouter(store: store, verify: verifier.verify).call,
-      );
+      .addHandler(buildRouter(store: store, verify: verify).call);
 
   final port = int.parse(Platform.environment['PORT'] ?? '8080');
   final server = await serve(handler, InternetAddress.anyIPv4, port);

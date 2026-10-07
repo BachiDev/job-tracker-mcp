@@ -391,8 +391,7 @@ class Store {
   /// Auth-user removal itself is a Neon console step (documented in README).
   /// Table names are fixed literals (never user input) — one statement each
   /// so every query stays fully parameterized.
-  Future<Map<String, int>> deleteAccount(String userId) async {
-    return _db.runTx((tx) async {
+  Future<Map<String, int>> deleteAccount(String userId) async {    return _db.runTx((tx) async {
       final interactions = await tx.execute(
         Sql.named('DELETE FROM interactions WHERE user_id=@u'),
         parameters: {'u': userId},
@@ -411,6 +410,147 @@ class Store {
         'applications': applications.affectedRows,
       };
     });
+  }
+
+  // -- demo accounts (ephemeral, PLAN decision 14) ------------------------
+
+  /// Seeds the V2 demo dataset for [userId] with fresh ids. Same content as
+  /// db/migrations/V2__seed_demo.sql, parameterized for ephemeral users.
+  Future<void> seedDemo(String userId) async {
+    await _db.runTx((tx) async {
+      Future<String> app(
+        String company,
+        String role,
+        String source,
+        String stage,
+        int appliedDaysAgo, [
+        int? smin,
+        int? smax,
+        String? notes,
+      ]) async {
+        final rows = await tx.execute(
+          Sql.named(
+            'INSERT INTO applications (user_id, company, role, source, stage,'
+            ' applied_at, salary_min, salary_max, notes)'
+            " VALUES (@u,@c,@r,@s,@st, now() - ((@ago::text) || ' days')::interval,"
+            ' @smin,@smax,@n) RETURNING id',
+          ),
+          parameters: {
+            'u': userId,
+            'c': company,
+            'r': role,
+            's': source,
+            'st': stage,
+            'ago': appliedDaysAgo,
+            'smin': smin,
+            'smax': smax,
+            'n': notes,
+          },
+        );
+        return (rows.first.toColumnMap()['id'] as Object).toString();
+      }
+
+      Future<void> contact(
+        String? appId,
+        String name,
+        String role,
+        String company,
+        Map<String, String> channels,
+      ) => tx.execute(
+        Sql.named(
+          'INSERT INTO contacts (user_id, application_id, name, role, company, channels)'
+          ' VALUES (@u,@app,@n,@r,@c,@ch)',
+        ),
+        parameters: {
+          'u': userId,
+          'app': appId,
+          'n': name,
+          'r': role,
+          'c': company,
+          'ch': channels,
+        },
+      );
+
+      Future<void> interaction(
+        String appId,
+        String type,
+        int happenedDaysAgo,
+        String summary, [
+        int? followUpInDays,
+      ]) => tx.execute(
+        Sql.named(
+          'INSERT INTO interactions (user_id, application_id, type, happened_at, summary, follow_up_at)'
+          " VALUES (@u,@app,@t, now() - ((@ago::text) || ' days')::interval, @s,"
+          " CASE WHEN @fu::int IS NULL THEN NULL ELSE now() + (((@fu::text)) || ' days')::interval END)",
+        ),
+        parameters: {
+          'u': userId,
+          'app': appId,
+          't': type,
+          'ago': happenedDaysAgo,
+          's': summary,
+          'fu': followUpInDays,
+        },
+      );
+
+      final acme = await app('Acme Corp', 'Backend Engineer', 'referral',
+          'applied', 9, 80000, 110000, 'Demo data: met at meetup.');
+      final globex = await app('Globex', 'Flutter Developer', 'job board',
+          'interview', 4, 90000, 120000, 'Demo data: on-site next week.');
+      final initech = await app('Initech', 'Full-stack Engineer',
+          'company site', 'screening', 2, null, null, 'Demo data: recruiter call done.');
+      final umbrella = await app('Umbrella', 'DevOps Engineer', 'linkedin',
+          'offer', 1, 100000, 130000, 'Demo data: offer received.');
+      await app('Stark Industries', 'Mobile Engineer', 'referral', 'saved',
+          30, null, null, 'Demo data: interesting but not urgent.');
+      await app('Wayne Enterprises', 'QA Engineer', 'job board', 'rejected',
+          20, null, null, 'Demo data: rejected after screening.');
+
+      await contact(acme, 'Ada Example', 'Hiring Manager', 'Acme Corp',
+          {'email': 'ada@example.com'});
+      await contact(globex, 'Bob Sample', 'Engineering Lead', 'Globex',
+          {'email': 'bob@example.com'});
+      await contact(null, 'Cara Demo', 'Recruiter', 'Tech Search',
+          {'email': 'cara@example.com'});
+
+      await interaction(acme, 'email', 9,
+          'Demo data: application sent with referral.', -2);
+      await interaction(globex, 'call', 4,
+          'Demo data: screening call, positive signal.', 2);
+      await interaction(initech, 'call', 2,
+          'Demo data: recruiter screen done.');
+      await interaction(umbrella, 'meeting', 1,
+          'Demo data: final round, offer received.', 6);
+    });
+  }
+
+  /// Stores a demo bearer (sha256 [tokenHash]) for [userId].
+  Future<void> createDemoSession(
+    String userId,
+    String tokenHash,
+    DateTime expiresAt,
+  ) async {
+    await _db.execute(
+      Sql.named(
+        'INSERT INTO demo_sessions (token_hash, user_id, expires_at)'
+        ' VALUES (@h,@u,@e)',
+      ),
+      parameters: {'h': tokenHash, 'u': userId, 'e': expiresAt.toUtc()},
+    );
+  }
+
+  /// Resolves a demo bearer to its user, or null (unknown/expired).
+  /// Expired sessions are swept on every call (TTL cleanup).
+  Future<String?> resolveDemoUser(String tokenHash) async {
+    await _db.execute(
+      Sql.named('DELETE FROM demo_sessions WHERE expires_at < now()'),
+    );
+    final rows = await _db.execute(
+      Sql.named('SELECT user_id FROM demo_sessions WHERE token_hash=@h'),
+      parameters: {'h': tokenHash},
+    );
+    if (rows.isEmpty) return null;
+    return rows.first.toColumnMap()['user_id'] as String;
   }
 
   // -- mapping (defense-in-depth ownership check on every decode) ---------

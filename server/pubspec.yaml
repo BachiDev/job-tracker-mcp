@@ -17,6 +17,7 @@ dependencies:
     path: ../packages/core
   meta: ^1.16.0
   postgres: ^3.5.20
+  crypto: ^3.0.7
 
 dev_dependencies:
   lints: ^6.0.0

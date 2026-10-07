@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:math';
 
+import 'package:crypto/crypto.dart';
 import 'package:job_tracker_core/job_tracker_core.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
@@ -10,9 +12,54 @@ import 'store.dart';
 /// Async JWT verification (live JWKS in prod, stub in tests).
 typedef VerifyToken = Future<JwtClaims> Function(String token);
 
-/// Builds the full HTTP surface: public `/` + `/health`, JWT-gated `/api/*`.
+/// Demo bootstrap TTL, hours (matches `.env.example` DEMO_TTL_HOURS).
+const demoTtlHours = 72;
+
+/// Max demo bootstraps per IP per hour (abuse guard, in-memory).
+const demoRateMax = 10;
+
+/// Sliding-window check. Pure (clock injectable) — unit-tested.
+bool demoAllowed(List<DateTime> hits, DateTime now) {
+  final cutoff = now.subtract(const Duration(hours: 1));
+  return hits.where((h) => h.isAfter(cutoff)).length < demoRateMax;
+}
+
+String _randomHex(int bytes) {
+  final r = Random.secure();
+  return [
+    for (var i = 0; i < bytes; i++)
+      r.nextInt(256).toRadixString(16).padLeft(2, '0'),
+  ].join();
+}
+
+String _sha256hex(String s) => sha256.convert(utf8.encode(s)).toString();
+
+/// Builds the full HTTP surface: public `/` + `/health` +
+/// `POST /api/demo/bootstrap`, JWT-or-demo-bearer-gated `/api/*`.
 Router buildRouter({required Store store, required VerifyToken verify}) {
+  final demoHits = <String, List<DateTime>>{};
   final api = Router()
+    ..post('/demo/bootstrap', (Request req) async {
+      final ip =
+          req.headers['x-forwarded-for']?.split(',').first.trim() ??
+          'unknown';
+      final now = DateTime.now().toUtc();
+      final hits = demoHits[ip] ?? [];
+      if (!demoAllowed(hits, now)) {
+        return _json({'error': 'rate limited, try later'}, status: 429);
+      }
+      demoHits[ip] = [...hits, now];
+      final userId = 'demo-${_randomHex(16)}';
+      await store.seedDemo(userId);
+      final token = _randomHex(32);
+      final expiresAt = now.add(const Duration(hours: demoTtlHours));
+      await store.createDemoSession(userId, _sha256hex(token), expiresAt);
+      return _json({
+        'user_id': userId,
+        'token': token,
+        'expires_at': expiresAt.toIso8601String(),
+      }, status: 201);
+    })
     ..get('/applications', (r) => _guard(r, verify, (sub, req) async {
       final q = req.url.queryParameters;
       final apps = await store.listApplications(
@@ -135,7 +182,24 @@ Router buildRouter({required Store store, required VerifyToken verify}) {
     ..mount('/api/', Pipeline().addHandler(api.call));
 }
 
-/// Auth gate: Bearer JWT → `sub` → handler. Any failure is 401, no fallback.
+/// Dual-issuer authentication: Better Auth JWT first, ephemeral demo bearer
+/// second (256-bit hex; sha256 stored). Either yields the caller `sub`.
+/// Non-hex tokens never touch the demo table.
+VerifyToken dualVerify({
+  required VerifyToken jwt,
+  required Store store,
+}) => (String token) async {
+  try {
+    return await jwt(token);
+  } catch (_) {
+    if (!RegExp(r'^[0-9a-fA-F]{64}$').hasMatch(token)) rethrow;
+    final sub = await store.resolveDemoUser(_sha256hex(token));
+    if (sub == null) rethrow;
+    return JwtClaims(sub: sub, raw: const {'demo': true});
+  }
+};
+
+/// Auth gate: Bearer token → `sub` → handler. Any failure is 401, no fallback.
 Future<Response> _guard(
   Request req,
   VerifyToken verify,
