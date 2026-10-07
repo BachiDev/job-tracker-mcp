@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:mcp_dart/mcp_dart.dart';
 
+import 'package:server/env.dart';
 import 'package:server/mcp_tools.dart';
 import 'package:server/store.dart';
 
@@ -14,11 +15,12 @@ import 'package:server/store.dart';
 /// Run: `dart run bin/mcp_stdio.dart --user <sub>`
 /// Verify: `npx @modelcontextprotocol/inspector --cli dart run bin/mcp_stdio.dart --user <sub> --method tools/list`
 Future<void> main(List<String> args) async {
-  String? userId = Platform.environment['JOB_TRACKER_USER_ID'];
+  final env = loadEnv();
+  String? userId = env['JOB_TRACKER_USER_ID'];
   for (var i = 0; i < args.length; i++) {
     if (args[i] == '--user' && i + 1 < args.length) userId = args[++i];
   }
-  final databaseUrl = Platform.environment['DATABASE_URL'];
+  final databaseUrl = env['DATABASE_URL'];
   if (userId == null || userId.isEmpty) {
     stderr.writeln('usage: dart run bin/mcp_stdio.dart --user <sub>');
     exit(2);

@@ -9,16 +9,18 @@
 import 'dart:io';
 
 import 'package:server/auth/jwt_verify.dart';
+import 'package:server/env.dart';
 
 Future<void> main(List<String> args) async {
+  final env = loadEnv();
   String? token;
-  String? jwksUrl = Platform.environment['NEON_AUTH_JWKS_URL'];
+  String? jwksUrl = env['NEON_AUTH_JWKS_URL'];
 
   for (var i = 0; i < args.length; i++) {
     if (args[i] == '--token' && i + 1 < args.length) token = args[++i];
     if (args[i] == '--jwks-url' && i + 1 < args.length) jwksUrl = args[++i];
   }
-  token ??= Platform.environment['SPIKE_JWT'];
+  token ??= env['SPIKE_JWT'];
   if (token == null || token.isEmpty) {
     stderr.writeln('usage: dart run tool/jwt_spike.dart --token <JWT>');
     exit(2);

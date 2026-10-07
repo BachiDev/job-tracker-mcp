@@ -10,6 +10,7 @@ import 'dart:io';
 
 import 'package:postgres/postgres.dart';
 import 'package:server/db.dart';
+import 'package:server/env.dart';
 
 /// Splits SQL text into statements on `;` outside strings/comments.
 /// V1/V2 use plain DDL + literals (no dollar-quoted bodies); the splitter
@@ -61,7 +62,7 @@ List<String> splitStatements(String sql) {
 }
 
 Future<void> main(List<String> args) async {
-  String? databaseUrl = Platform.environment['DATABASE_URL'];
+  String? databaseUrl = loadEnv()['DATABASE_URL'];
   var seed = false;
   var dir = '../db/migrations';
 
